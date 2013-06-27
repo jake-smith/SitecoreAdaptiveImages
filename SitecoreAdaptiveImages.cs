@@ -63,8 +63,8 @@ namespace adaptiveImages
         {
             Assert.ArgumentNotNull(item, "item");
 
-            //If media item is not an image or the page context is not normal, then return
-            if (!IsImage(item) || !Sitecore.Context.PageMode.IsNormal)
+            //If we are not in the context of a request, or if media item is not an image or the page context is not normal, then return
+            if (Context.Request == null || !IsImage(item) || !Sitecore.Context.PageMode.IsNormal)
                 return base.GetMediaUrl(item);
 
             MediaUrlOptions mediaUrlOptions = new MediaUrlOptions();
@@ -83,8 +83,8 @@ namespace adaptiveImages
             Assert.ArgumentNotNull(item, "item");
             Assert.ArgumentNotNull(mediaUrlOptions, "mediaUrlOptions");
 
-            //If media item is not an image or the page context is not normal, then return
-            if (!IsImage(item) || !Context.PageMode.IsNormal || Context.Database == null || Context.Database.Name != _database)
+            //If we are not in the context of a request, or if media item is not an image or the page context is not normal, then return
+            if (Context.Request == null || !IsImage(item) || !Context.PageMode.IsNormal || Context.Database == null || Context.Database.Name != _database)
                 return base.GetMediaUrl(item, mediaUrlOptions);
 
             //If resolution cookie is not set
@@ -115,7 +115,7 @@ namespace adaptiveImages
                     if (GetCookiePixelDensity() == 1)
                         mediaUrlOptions.MaxWidth = maxWidth;
                     else
-                        mediaUrlOptions.MaxWidth = maxWidth * GetCookiePixelDensity();
+                        mediaUrlOptions.MaxWidth = (int)(maxWidth * GetCookiePixelDensity());
                 }
 
             }
@@ -180,7 +180,7 @@ namespace adaptiveImages
             if (clientWidth != 0)
             {
                 // Get the screen pixel density ratio cookie value
-                int clientPixelDensity = GetCookiePixelDensity();
+                double clientPixelDensity = GetCookiePixelDensity();
 
                 // if pixel density is 1 (normal), then return the appropriate resolution break point, else we need some more logic
                 if (clientPixelDensity == 1)
@@ -189,7 +189,7 @@ namespace adaptiveImages
                 }
                 else
                 {
-                    int totalWidth = clientWidth * clientPixelDensity; // Required physical pixel width of the image
+                    int totalWidth = (int)(clientWidth * clientPixelDensity); // Required physical pixel width of the image
                     // Try to fit into a breakpoint while ignoring the multiplier
                     foreach (int breakpoint in _resolutions.Where(breakpoint => totalWidth <= breakpoint))
                     {
@@ -198,7 +198,7 @@ namespace adaptiveImages
                     // Check if the required image width (including multiplier) is bigger than any existing breakpoint value
                     if (totalWidth > GetLargestBreakpoint())
                     {
-                        resolution = resolution * clientPixelDensity;
+                        resolution = (int)(resolution * clientPixelDensity);
                     }
                 }
             }
@@ -243,7 +243,7 @@ namespace adaptiveImages
         /// Gets the cookie pixel density.
         /// </summary>
         /// <returns></returns>
-        public int GetCookiePixelDensity()
+        public double GetCookiePixelDensity()
         {
             // Double check that the cookie identifying screen resolution is set
             if (!IsResolutionCookieSet())
@@ -255,8 +255,8 @@ namespace adaptiveImages
             // If we were able to get the cookie pixel density ratio
             if (cookieResolution.Length > 1)
             {
-                int clientPixelDensity = 0;
-                if (int.TryParse(cookieResolution[1], out clientPixelDensity))
+                double clientPixelDensity = 0;
+                if (double.TryParse(cookieResolution[1], out clientPixelDensity))
                     return clientPixelDensity;
             }
 
